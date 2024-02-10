@@ -12,65 +12,62 @@ import (
 )
 
 const (
-	WIDTH      = 640
-	HEIGHT     = 360
-	rectSize   = 1
-	gridWidth  = WIDTH / rectSize
-	gridHeight = HEIGHT / rectSize
+	SCREEN_WIDTH  = 640
+	SCREEN_HEIGHT = 360
+	RECT_SIZE     = 1
+	GRID_WIDTH    = SCREEN_WIDTH / RECT_SIZE
+	GRID_HEIGHT   = SCREEN_HEIGHT / RECT_SIZE
 )
 
-var tempGrid [][]int8
-
 type Game struct {
-	grid [][]int8
+	grid     [][]int8
+	tempGrid [][]int8
 }
 
-func makeGrid() [][]int8 {
-	grid := make([][]int8, gridHeight)
-	for i := range grid {
-		grid[i] = make([]int8, gridWidth)
-	}
+func NewGame() *Game {
+	game := &Game{grid: NewGrid(), tempGrid: NewGrid()}
 
-	for x := 0; x < WIDTH; x++ {
-		for y := 0; y < HEIGHT; y++ {
-			if rand.Float32() < 0.4 {
-				grid[y][x] = int8(1)
+	for x := 0; x < SCREEN_WIDTH; x++ {
+		for y := 0; y < SCREEN_HEIGHT; y++ {
+			if rand.Float32() < 0.2 {
+				game.grid[y][x] = int8(1)
 			}
 		}
 	}
-	return grid
+
+	return game
 }
 
-func init() {
-	tempGrid = make([][]int8, gridHeight)
-	for i := range tempGrid {
-		tempGrid[i] = make([]int8, gridWidth)
+func NewGrid() [][]int8 {
+	grid := make([][]int8, GRID_HEIGHT)
+	for i := range grid {
+		grid[i] = make([]int8, GRID_WIDTH)
 	}
+
+	return grid
 }
 
 func (g *Game) Update() error {
 	for y := range g.grid {
 		for x := range g.grid[y] {
-			tempGrid[y][x] = g.rule(x, y)
+			g.tempGrid[y][x] = g.Rule(x, y)
 		}
 	}
 
-	tmp := g.grid
-	g.grid = tempGrid
-	tempGrid = tmp
+	g.grid, g.tempGrid = g.tempGrid, g.grid
 
 	return nil
 }
 
-func (g *Game) rule(x, y int) int8 {
+func (g *Game) Rule(x, y int) int8 {
 	cnt := int8(0)
 	for dx := -1; dx < 2; dx++ {
 		for dy := -1; dy < 2; dy++ {
 			target_x, target_y := x+dx, y+dy
 
 			if (target_x != x || target_y != y) &&
-				target_x >= 0 && target_x < gridWidth &&
-				target_y >= 0 && target_y < gridHeight {
+				target_x >= 0 && target_x < GRID_WIDTH &&
+				target_y >= 0 && target_y < GRID_HEIGHT {
 				cnt += g.grid[target_y][target_x]
 			}
 		}
@@ -89,22 +86,22 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	for i := range g.grid {
 		for j := range g.grid[i] {
 			if g.grid[i][j] == 1 {
-				drawRect(screen, j*rectSize, i*rectSize)
+				DrawRect(screen, j*RECT_SIZE, i*RECT_SIZE)
 			}
 		}
 	}
 }
 
-func drawRect(screen *ebiten.Image, x, y int) {
-	vector.DrawFilledRect(screen, float32(x), float32(y), rectSize, rectSize, color.White, false)
+func DrawRect(screen *ebiten.Image, x, y int) {
+	vector.DrawFilledRect(screen, float32(x), float32(y), RECT_SIZE, RECT_SIZE, color.White, false)
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
-	return WIDTH, HEIGHT
+	return SCREEN_WIDTH, SCREEN_HEIGHT
 }
 
 func main() {
-	game := &Game{grid: makeGrid()}
+	game := NewGame()
 
 	ebiten.SetTPS(30)
 	ebiten.SetWindowSize(1280, 720)
