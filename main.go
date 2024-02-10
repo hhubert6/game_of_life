@@ -8,6 +8,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/hajimehoshi/ebiten/v2/vector"
 )
 
 const (
@@ -18,64 +19,64 @@ const (
 	gridHeight = HEIGHT / rectSize
 )
 
-var rectImg *ebiten.Image
-var grid [][]int8
+var tempGrid [][]int8
 
-type Game struct{}
+type Game struct {
+	grid [][]int8
+}
 
-func init() {
-	rectImg = ebiten.NewImage(rectSize, rectSize)
-	rectImg.Fill(color.RGBA{255, 255, 255, 255})
-
-	grid = make([][]int8, gridHeight)
+func makeGrid() [][]int8 {
+	grid := make([][]int8, gridHeight)
 	for i := range grid {
 		grid[i] = make([]int8, gridWidth)
 	}
 
-	for x := WIDTH / 4; x < 3*WIDTH/4; x++ {
-		for y := HEIGHT / 3; y < 2*HEIGHT/3; y++ {
-			if rand.Float32() < 0.2 {
+	for x := 0; x < WIDTH; x++ {
+		for y := 0; y < HEIGHT; y++ {
+			if rand.Float32() < 0.4 {
 				grid[y][x] = int8(1)
 			}
 		}
 	}
+	return grid
+}
+
+func init() {
+	tempGrid = make([][]int8, gridHeight)
+	for i := range tempGrid {
+		tempGrid[i] = make([]int8, gridWidth)
+	}
 }
 
 func (g *Game) Update() error {
-	tempGrid := make([][]int8, gridHeight)
-	for i := range grid {
-		tempGrid[i] = make([]int8, gridWidth)
-	}
-
-	for y := range grid {
-		for x := range grid[y] {
-			tempGrid[y][x] = rule(x, y)
+	for y := range g.grid {
+		for x := range g.grid[y] {
+			tempGrid[y][x] = g.rule(x, y)
 		}
 	}
 
-	for y := range grid {
-		for x := range grid[y] {
-			grid[y][x] = tempGrid[y][x]
-		}
-	}
+	tmp := g.grid
+	g.grid = tempGrid
+	tempGrid = tmp
 
 	return nil
 }
 
-func rule(x, y int) int8 {
+func (g *Game) rule(x, y int) int8 {
 	cnt := int8(0)
-	for _, dx := range []int{-1, 0, 1} {
-		for _, dy := range []int{-1, 0, 1} {
+	for dx := -1; dx < 2; dx++ {
+		for dy := -1; dy < 2; dy++ {
 			target_x, target_y := x+dx, y+dy
+
 			if (target_x != x || target_y != y) &&
 				target_x >= 0 && target_x < gridWidth &&
 				target_y >= 0 && target_y < gridHeight {
-				cnt += grid[target_y][target_x]
+				cnt += g.grid[target_y][target_x]
 			}
 		}
 	}
 
-	alive := grid[y][x] == 1
+	alive := g.grid[y][x] == 1
 	if alive && (cnt == 2 || cnt == 3) || !alive && cnt == 3 {
 		return int8(1)
 	}
@@ -85,9 +86,9 @@ func rule(x, y int) int8 {
 func (g *Game) Draw(screen *ebiten.Image) {
 	ebitenutil.DebugPrint(screen, fmt.Sprintf("%.2f", ebiten.ActualFPS()))
 
-	for i := range grid {
-		for j := range grid[i] {
-			if alive := grid[i][j]; alive == 1 {
+	for i := range g.grid {
+		for j := range g.grid[i] {
+			if g.grid[i][j] == 1 {
 				drawRect(screen, j*rectSize, i*rectSize)
 			}
 		}
@@ -95,9 +96,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 }
 
 func drawRect(screen *ebiten.Image, x, y int) {
-	op := &ebiten.DrawImageOptions{}
-	op.GeoM.Translate(float64(x), float64(y))
-	screen.DrawImage(rectImg, op)
+	vector.DrawFilledRect(screen, float32(x), float32(y), rectSize, rectSize, color.White, false)
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
@@ -105,7 +104,7 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 }
 
 func main() {
-	game := &Game{}
+	game := &Game{grid: makeGrid()}
 
 	ebiten.SetTPS(30)
 	ebiten.SetWindowSize(1280, 720)
