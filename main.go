@@ -19,18 +19,20 @@ const (
 	GRID_HEIGHT   = SCREEN_HEIGHT / RECT_SIZE
 )
 
+type Grid [][]int8
+
 type Game struct {
-	grid     [][]int8
-	tempGrid [][]int8
+	Grid     Grid
+	TempGrid Grid
 }
 
 func NewGame() *Game {
-	game := &Game{grid: NewGrid(), tempGrid: NewGrid()}
+	game := &Game{NewGrid(), NewGrid()}
 
 	for x := 0; x < SCREEN_WIDTH; x++ {
 		for y := 0; y < SCREEN_HEIGHT; y++ {
 			if rand.Float32() < 0.2 {
-				game.grid[y][x] = int8(1)
+				game.Grid[y][x] = int8(1)
 			}
 		}
 	}
@@ -38,8 +40,8 @@ func NewGame() *Game {
 	return game
 }
 
-func NewGrid() [][]int8 {
-	grid := make([][]int8, GRID_HEIGHT)
+func NewGrid() Grid {
+	grid := make(Grid, GRID_HEIGHT)
 	for i := range grid {
 		grid[i] = make([]int8, GRID_WIDTH)
 	}
@@ -48,13 +50,13 @@ func NewGrid() [][]int8 {
 }
 
 func (g *Game) Update() error {
-	for y := range g.grid {
-		for x := range g.grid[y] {
-			g.tempGrid[y][x] = g.Rule(x, y)
+	for y := range g.Grid {
+		for x := range g.Grid[y] {
+			g.TempGrid[y][x] = g.Rule(x, y)
 		}
 	}
 
-	g.grid, g.tempGrid = g.tempGrid, g.grid
+	g.Grid, g.TempGrid = g.TempGrid, g.Grid
 
 	return nil
 }
@@ -68,12 +70,12 @@ func (g *Game) Rule(x, y int) int8 {
 			if (target_x != x || target_y != y) &&
 				target_x >= 0 && target_x < GRID_WIDTH &&
 				target_y >= 0 && target_y < GRID_HEIGHT {
-				cnt += g.grid[target_y][target_x]
+				cnt += g.Grid[target_y][target_x]
 			}
 		}
 	}
 
-	alive := g.grid[y][x] == 1
+	alive := g.Grid[y][x] == 1
 	if alive && (cnt == 2 || cnt == 3) || !alive && cnt == 3 {
 		return int8(1)
 	}
@@ -83,9 +85,9 @@ func (g *Game) Rule(x, y int) int8 {
 func (g *Game) Draw(screen *ebiten.Image) {
 	ebitenutil.DebugPrint(screen, fmt.Sprintf("%.2f", ebiten.ActualFPS()))
 
-	for i := range g.grid {
-		for j := range g.grid[i] {
-			if g.grid[i][j] == 1 {
+	for i := range g.Grid {
+		for j := range g.Grid[i] {
+			if g.Grid[i][j] == 1 {
 				DrawRect(screen, j*RECT_SIZE, i*RECT_SIZE)
 			}
 		}
